@@ -90,96 +90,99 @@ exports.getLines = (req,res) => {
 
 //Retorna los datos filtrados por fechas
 exports.getFilter = function (req, res) {
+    
+        var initDate = new Date(req.params.initDate),
+            endDate = req.params.endDate ? new Date(req.params.endDate) : new Date();
 
-    var dInit = req.query.dateInit,
-        dEnd = (req.query.dateEnd) ? req.query.dateEnd : new Date();
-
-    Promise.all([filterPoints(dInit, dEnd), filterLines(dInit, dEnd)]).then(function (data) {
-
-        let gjPoints = GeoJSON.parse(data[0], { GeoJSON: 'geo' });
-        var gjLines = GeoJSON.parse(data[1], { 'LineString': 'line' });
-
-        res.send(200, { gjPoints, gjLines });
-    });
-
-
-}
-
-//Filtracion de los puntos
-var filterPoints = (dInit, dEnd) => {
-
-    return new Promise(function (resolve, reject) {
-
-        db.collection('Zeus').find({
-            "$and": [
-                { "dateRemora": { "$gte": new Date(dInit) } },
-                { "dateRemora": { "$lte": new Date(dEnd) } }]
-        }).sort({ dateRemora: 1 }).toArray(function (err, doc) {
-
-            if (err) { throw err; res.send(400, err); }
-            else {
-
-                var previousPoint, distance;
-                doc.forEach(function (element, index) {
-
-                    if (index == 0) previousPoint = element
-
-                    //Tiempo trancurrido entre punto y punto
-                    let dateInit = new Date(previousPoint.dateRemora).getTime();
-                    let dateEnd = new Date(element.dateRemora).getTime();
-                    let diffMin = (dateEnd - dateInit) / (1000 * 60);
-
-                    //Distancia entre punto y punto 
-                    let from = turf.point(previousPoint.geo.coordinates);
-                    let to = turf.point(element.geo.coordinates);
-                    distance = turf.distance(from, to);
-
-                    element['deltaDistance'] = distance;
-                    element['deltaTime'] = diffMin;
-                    element['Head'] = parseInt(element['Head']) + 180
-                    previousPoint = element
-
-                })
-                resolve(doc)
-            }
+            console.log('demo',initDate)
+    
+        Promise.all([filterPoints(initDate, endDate), filterLines(initDate, endDate)]).then(function (data) {
+    
+           
+            /* let gjPoints = GeoJSON.parse(data[0], { GeoJSON: 'geo' });
+            var gjLines = GeoJSON.parse(data[1], { 'LineString': 'line' }); */
+    
+            res.send(200, { d: data});
         });
-
-
-    });
-}
-
-//Filtracion de las lineas
-var filterLines = (dInit, dEnd) => {
-
-    return new Promise(function (resolve, reject) {
-
-        db.collection('Zeus').aggregate([
-            {
-                $match: {
-                    "$and": [
-                        { "dateRemora": { "$gte": new Date(dInit) } },
-                        { "dateRemora": { "$lte": new Date(dEnd) } }]
-                }
-            },
-            {
-                $group: {
-                    _id: "$ID",
-                    line: {
-                        $push: "$geo.coordinates"
-                    }
-                }
-            }
-        ],
-            function (err, doc) {
-
+    
+    
+    }
+    
+    //Filtracion de los puntos
+    var filterPoints = (initDate, endDate) => {
+    
+        return new Promise(function (resolve, reject) {
+    
+            db.collection('Zeus').find({
+                "$and": [
+                    { "dateRemora": { "$gte":initDate } },
+                    { "dateRemora": { "$lte":endDate } }]
+            }).sort({ dateRemora: 1 }).toArray(function (err, doc) {
+    
                 if (err) { throw err; res.send(400, err); }
                 else {
+    
+                    var previousPoint, distance;
+                    doc.forEach(function (element, index) {
+    
+                        if (index == 0) previousPoint = element
+    
+                        //Tiempo trancurrido entre punto y punto
+                        let dateInit = new Date(previousPoint.dateRemora).getTime();
+                        let dateEnd = new Date(element.dateRemora).getTime();
+                        let diffMin = (dateEnd - dateInit) / (1000 * 60);
+    
+                        //Distancia entre punto y punto 
+                        let from = turf.point(previousPoint.geo.coordinates);
+                        let to = turf.point(element.geo.coordinates);
+                        distance = turf.distance(from, to);
+    
+                        element['deltaDistance'] = distance;
+                        element['deltaTime'] = diffMin;
+                        element['Head'] = parseInt(element['Head']) + 180
+                        previousPoint = element
+    
+                    })
                     resolve(doc)
                 }
             });
-    });
-}
-
+    
+    
+        });
+    }
+    
+    //Filtracion de las lineas
+    var filterLines = (initDate, endDate) => {
+    
+        return new Promise(function (resolve, reject) {
+    
+            db.collection('Zeus').aggregate([
+                {
+                    $match: {
+                        "$and": [
+                            { "dateRemora": { "$gte": initDate } },
+                            { "dateRemora": { "$lte": endDate } }]
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$ID",
+                        line: {
+                            $push: "$geo.coordinates"
+                        }
+                    }
+                }
+            ],
+                function (err, doc) {
+    
+                    if (err) { throw err; res.send(400, err); }
+                    else {
+                        resolve(doc)
+                    }
+                });
+        });
+    }
+    
 //Inserta un nuevo punto 
 exports.insertPoint = function (req, res) {
 

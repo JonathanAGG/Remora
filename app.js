@@ -7,6 +7,7 @@ var bodyParser = require('body-parser');
 
 var zeus = require('./routes/zeus');
 var geofences = require('./routes/geofences');
+var simplifys = require('./routes/simplifys');
 
 var app = express(); 
 
@@ -20,6 +21,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/zeus', zeus);
 app.use('/geofences', geofences);
+app.use('/simplifys', simplifys);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -36,7 +38,7 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  //console.log(res);
+  console.log('res',res.locals.message );
   res.json({err: res})
 });
 

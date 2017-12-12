@@ -4,12 +4,16 @@ var router = express.Router();
 const geofencesController = require("../controllers/geofences");
 
 /* GET */
-router.get('/polygons', geofencesController.getPolygons);
+router.get('/', geofencesController.getPolygons);
+router.get('/simplifys', geofencesController.getSimplifyPolygons);
 
 /* POST */
-router.post('/polygons', geofencesController.insertPolygons);
+router.post('/', geofencesController.insertPolygons);
 
 /* DELETE */
-router.delete('/polygons/:id', geofencesController.deletePolygons);
+router.delete('/:id', geofencesController.deletePolygons);
+
+/* PUT */
+router.put('/:id/simplifys', geofencesController.insertSimplify );
 
 module.exports = router;
