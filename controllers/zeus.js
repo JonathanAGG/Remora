@@ -36,6 +36,7 @@ exports.getPoints = (req, res) => {
     db.collection('Zeus').find({ geo: { $exists: true } }).sort({ dateRemora: 1 }).toArray(function (err, doc) {
 
         if (err) res.send(404,{err})
+        
         else {
 
             console.log('ak7')
@@ -74,7 +75,7 @@ exports.getLines = (req,res) => {
 
         db.collection('Zeus').aggregate([{
             $group: {
-                _id: "$ID",
+                _id: "$ID", 
                 line: {
                     $push: "$geo.coordinates"
                 }
