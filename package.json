@@ -15,6 +15,7 @@
     "nodemon": "^1.12.5",
     "serve-favicon": "~2.4.2",
     "socket.io": "^2.0.4",
-    "turf": "^3.0.14"
+    "turf": "^3.0.14",
+    "geojson": "^0.5.0"
   }
 }

@@ -24,6 +24,11 @@ mongo.MongoClient.connect(uristring, function (err, database) {
     }
 });
 
+//Función para el manejo de la zona horaria
+Date.prototype.addHours = function (h) {
+    this.setHours(this.getHours() + h);
+    return this;
+}
 
 
 //Retorna todos los puntos

@@ -1,22 +1,67 @@
 'use strict'
 
 const io = require('socket.io')(3001);
+const turf = require('turf');
+const GeoJSON = require('geojson');
+const geofencesController = require("../controllers/geofences");
 
 io.on('connection', function (socket) {
+  /* console.log('connection');
+  socket.emit('news', { hello: 'world' }); */
+});
 
-  console.log('connection');
-  socket.emit('news', { hello: 'world' });
 
-  /*   socket.on('my other event', function (data) {
-      console.log(data);
+//Middleware para darle formato a los datos que vienen del hardware
+exports.formatPoint = (req, res, next) => {
+
+  var point = req.body;
+
+  //Fecha actual del servidor
+  point['dateServer'] = new Date().addHours(-6);
+
+  //Dar formato a la fecha de remora
+  var fecha = "" + point.fecha;
+  var dateRemora = new Date(fecha.slice(0, 4), parseInt(fecha.slice(4, 6)) - 1, fecha.slice(6, 8), fecha.slice(8, 10), fecha.slice(10, 12)).addHours(-6);
+  point["dateRemora"] = dateRemora;
+
+  //Dar formato al geoJson
+  point['geo'] = {
+    type: "Point",
+    "coordinates": [point.lon, point.lat]
+  };
+
+  delete point['fecha'];
+  delete point['lat'];
+  delete point['lon'];
+
+  next();
+}
+
+//Middleware para redirigir el punto 
+exports.redirectPoint = (req, res, next) => {
+
+  var point = req.body;
+  var gjNewPoint = GeoJSON.parse(point, { GeoJSON: 'geo' });
+  io.emit('news', gjNewPoint);
+  next();
+}
+
+//Middleware para validar si el punto se encuantra dentro de un geofence 
+exports.checkGeofence = (req, res, next) => {
+
+  var point = req.body;
+
+  //Verificacion si el punto se encuentra dentro de una geofence
+  geofencesController.checkGeofence(point['geo'])
+    .then(function (alert) {
+
+      if (alert[0] == null) {
+        var gjNewPoint = GeoJSON.parse(point, { GeoJSON: 'geo' });
+        io.emit('news', gjNewPoint);
+      }
+    }, function (err) {
+      console.log(err);
     });
-   */
-});/* */
-
-exports.updatePoint = (req, res, next) => {
-
-  io.emit('news', { message: req.body });
-  console.log('update');
   next();
 }
 
