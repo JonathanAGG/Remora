@@ -1,8 +1,10 @@
 var express = require('express');
 var router = express.Router();
 
+
 const geofencesController = require("../controllers/geofences");
 const socketMiddleware = require("../middlewares/sockets");
+const quadtreeMiddleware = require("../middlewares/quadtree");
 
 /* GET */
 router.get('/', geofencesController.getPolygons);
@@ -13,7 +15,7 @@ router.get('/squares', geofencesController.getSquares);
 router.post('/', geofencesController.insertPolygons);
 
 /* PUT */
-router.put('/:id/simplifys', geofencesController.insertSimplifys ); //Insert simplify
+router.put('/:id/simplifys', socketMiddleware.createSquares ,geofencesController.insertSimplifys ); //Insert simplify
 //router.put('/:id/squares', geofencesController.insertSquares ); //Insert squares 
 
 /* DELETE */

@@ -3,6 +3,7 @@ var mongo = require('mongodb'); //Biblioteca para comunicarse con la base de dat
 //var GeoJSON = require('geojson'); //Modulo para parsear de un json a un geoJson
 //var turf = require('turf'); //Modulo para medir distancias a partir de coordenadas
 var turf = require('turf'); //Modulo para medir distancias a partir de coordenadas
+const GeoJSON = require('geojson');
 
 //Puerto de conexión con la base de datos (no es el mismo de escucha del servidor)
 var uristring =
@@ -34,17 +35,15 @@ Date.prototype.addHours = function (h) {
 //Retorna todos los puntos
 exports.getPoints = (req, res) => {
 
-    //Indexes geospatial
+    //Indexes geospatial (Habilitar solo la primera vez)
     //db.collection('Zeus').createIndex({ geo: "2dsphere" })
-    //   db.collection('geofence').createIndex({ geo: "2dsphere" })
+    //db.collection('geofence').createIndex({ geo: "2dsphere" })
 
     db.collection('Zeus').find({ geo: { $exists: true } }).sort({ dateRemora: 1 }).toArray(function (err, doc) {
 
         if (err) res.send(404,{err})
         
         else {
-
-            console.log('ak7')
 
             var previousPoint, distance;
             doc.forEach(function (element, index) {
@@ -70,7 +69,8 @@ exports.getPoints = (req, res) => {
 
             })
 
-            res.send(200,doc)
+            let featureCollection = GeoJSON.parse(doc, {GeoJSON: 'geo'});
+            res.send(200,featureCollection)
         }
     });
 }
@@ -89,7 +89,8 @@ exports.getLines = (req,res) => {
 
             if (err) { throw err; res.send(400, err); }
             else {
-                res.send(200,doc)
+                let featureCollection = GeoJSON.parse(doc, { 'LineString': 'line' });
+                res.send(200,featureCollection)
             }
         });
 }
@@ -105,13 +106,11 @@ exports.getFilter = function (req, res) {
         Promise.all([filterPoints(initDate, endDate), filterLines(initDate, endDate)]).then(function (data) {
     
            
-            /* let gjPoints = GeoJSON.parse(data[0], { GeoJSON: 'geo' });
-            var gjLines = GeoJSON.parse(data[1], { 'LineString': 'line' }); */
+            let gjPoints = GeoJSON.parse(data[0], { GeoJSON: 'geo' });
+            let gjLines = GeoJSON.parse(data[1], { 'LineString': 'line' });
     
-            res.send(200, { d: data});
+            res.send(200, {gjPoints,gjLines});
         });
-    
-    
     }
     
     //Filtracion de los puntos

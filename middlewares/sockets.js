@@ -3,11 +3,13 @@
 const io = require('socket.io')(3001);
 const turf = require('turf');
 const GeoJSON = require('geojson');
+
 const geofencesController = require("../controllers/geofences");
+const quadtree = require("../middlewares/demo")
 
 io.on('connection', function (socket) {
-  /* console.log('connection');
-  socket.emit('news', { hello: 'world' }); */
+  console.log('connection');
+  socket.emit('news', { hello: 'world' });
 });
 
 
@@ -41,8 +43,10 @@ exports.formatPoint = (req, res, next) => {
 exports.redirectPoint = (req, res, next) => {
 
   var point = req.body;
+  point['deltaTime'] = 0;
+  point['deltaDistance'] = 0;
   var gjNewPoint = GeoJSON.parse(point, { GeoJSON: 'geo' });
-  io.emit('news', gjNewPoint);
+  io.emit('newPoint', gjNewPoint);
   next();
 }
 
@@ -55,9 +59,16 @@ exports.checkGeofence = (req, res, next) => {
   geofencesController.checkGeofence(point['geo'])
     .then(function (alert) {
 
-      if (alert[0] == null) {
-        var gjNewPoint = GeoJSON.parse(point, { GeoJSON: 'geo' });
-        io.emit('news', gjNewPoint);
+      if (alert.length > 0) {
+        let gjPoint = GeoJSON.parse(point, { GeoJSON: 'geo' });
+        let gjPolygon = GeoJSON.parse(alert[0], { GeoJSON: 'geo' });
+
+        let response = {
+          geofence: gjPolygon,
+          point: gjPoint
+        }
+
+        io.emit('alert', response);
       }
     }, function (err) {
       console.log(err);
@@ -70,4 +81,20 @@ exports.deleteGeofence = (req, res, next) => {
   io.emit('news', { message: 'deleted' });
   console.log('delete');
   next();
+}
+
+exports.createSquares = (req, res, next) => {
+  let geofence = req.body
+  let id = req.params.id
+  quadtree.quadtree(geofence).then(function(squaresCollection){
+
+    geofencesController.insertSquares(squaresCollection,id).then(response => {
+
+      io.emit('newSquares', squaresCollection);
+    })
+    
+  })
+  next();
+
+  //next();
 }

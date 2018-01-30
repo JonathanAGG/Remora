@@ -6,7 +6,7 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var debug = require('debug')('remora:server');
 var http = require('http');
-
+var cors = require('cors')
 
 var zeus = require('./routes/zeus');
 var geofences = require('./routes/geofences');
@@ -33,6 +33,7 @@ var io = require('socket.io')(server);
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(cors())
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));

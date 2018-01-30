@@ -2,6 +2,7 @@
 var mongo = require('mongodb'); //Biblioteca para comunicarse con la base de datos MongoDB
 //var GeoJSON = require('geojson'); //Modulo para parsear de un json a un geoJson
 var turf = require('turf'); //Modulo para medir distancias a partir de coordenadas
+const GeoJSON = require('geojson');
 
 //Puerto de conexión con la base de datos (no es el mismo de escucha del servidor)
 var uristring =
@@ -30,7 +31,14 @@ exports.getPolygons = function (req, res) {
 
     db.collection('geofence').find({ geo: { $exists: true } }, { simplify: 0, squares: 0 }).toArray(function (err, doc) {
 
-        err ? res.send(404, { message: err }) : res.send(200, doc);
+        if (err) {
+            res.send(404, { message: err })
+        }
+        else {
+
+            let featureCollection = GeoJSON.parse(doc, { GeoJSON: 'geo' });
+            res.send(200, featureCollection);
+        }
     });
 }
 
@@ -38,8 +46,8 @@ exports.getPolygons = function (req, res) {
 exports.getSimplifys = (req, res) => {
 
     db.collection('geofence').find({ simplify: { $exists: true } }, { geo: 0, squares: 0 }).toArray(function (err, doc) {
-
-        err ? res.status(404).send({ message: err }) : res.status(200).send(doc)
+        let featureCollection = GeoJSON.parse(doc, { GeoJSON: 'simplify' });
+        err ? res.status(404).send({ message: err }) : res.status(200).send(featureCollection)
     });
 }
 
@@ -48,16 +56,19 @@ exports.getSquares = function (req, res) {
 
     //res.status(200).send({ message: 'ak7' })
     db.collection('geofence').find({ squares: { $exists: true } }, { geo: 0, simplify: 0 }).toArray(function (err, doc) {
-
-        err ? res.status(404).send({ message: err }) : res.status(200).send(doc)
+        if (err) {
+            res.status(404).send({ message: err })
+        }
+        else {
+            res.status(200).send(doc)
+        }
     });
 }
 
 //Inserta una nueva geofence
 exports.insertPolygons = (req, res) => {
 
-    let gjCollection = req.body
-
+    let gjCollection = req.body;
     var arrGeofences = [];
     //Recorrer todas las features para almacenar los poligonos uno por uno
     gjCollection.features.forEach(function (feature) {
@@ -67,11 +78,10 @@ exports.insertPolygons = (req, res) => {
             geo: feature.geometry
         })
     })
-
     //Guardar las geofences
     db.collection('geofence').insert(arrGeofences, function (err, doc) {
         if (err) {
-            throw err;
+            //throw err;
             res.send(404, { message: err })
         }
         else res.send(201, doc)
@@ -81,9 +91,10 @@ exports.insertPolygons = (req, res) => {
 //Inserta la geofence simplificada (Actualiza la geofence original)
 exports.insertSimplifys = (req, res) => {
 
+
+
     let _id = new mongo.ObjectID(req.params.id),
         simplify = req.body.geometry;
-
     db.collection('geofence').findAndModify(
         { _id: _id },
         [],
@@ -101,23 +112,27 @@ exports.insertSimplifys = (req, res) => {
 //Inserta la los cuadros de que le pertenecen a una geofence 
 exports.insertSquares = (data, id) => {
 
-    let _id = new mongo.ObjectID(id),
-        squares = data
+    return new Promise((resolve, reject) => {
 
-    db.collection('geofence').findAndModify(
-        { _id: _id },
-        [],
-        { $set: { squares } },
-        { new: true },
-        function (err, doc) {
-            if (err) {
-                console.log('SQ err')
-                throw err;
-            }
-            else {
-                resolve(doc)
-            }
-        });
+        let _id = new mongo.ObjectID(id),
+            squares = data
+
+        db.collection('geofence').findAndModify(
+            { _id: _id },
+            [],
+            { $set: { squares } },
+            { new: true },
+            function (err, doc) {
+                if (err) {
+                    console.log('SQ err')
+                    reject(err)
+                }
+                else {
+                    console.log('saved squares')
+                    resolve(doc)
+                }
+            });
+    })
 }
 
 //Elimina una geofence
@@ -125,7 +140,6 @@ exports.deletePolygons = function (req, res) {
 
     let id = req.params.id;
 
-    console.log('id', id)
     db.collection('geofence').findAndRemove({ _id: new mongo.ObjectID(id) }, function (err, doc) {
 
         err ? res.send(400, { message: err }) : res.send(202, doc);
