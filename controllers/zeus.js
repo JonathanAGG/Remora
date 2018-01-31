@@ -39,60 +39,94 @@ exports.getPoints = (req, res) => {
     //db.collection('Zeus').createIndex({ geo: "2dsphere" })
     //db.collection('geofence').createIndex({ geo: "2dsphere" })
 
-    db.collection('Zeus').find({ geo: { $exists: true } }).sort({ dateRemora: 1 }).toArray(function (err, doc) {
-
-        if (err) res.send(404, { err })
-
-        else {
-
-            var previousPoint, distance;
-            doc.forEach(function (element, index) {
-
-
-
-                if (index == 0) previousPoint = element
-
-                //Tiempo trancurrido entre punto y punto
-                let dateInit = new Date(previousPoint.dateRemora).getTime();
-                let dateEnd = new Date(element.dateRemora).getTime();
-                let diffMin = (dateEnd - dateInit) / (1000 * 60);
-
-                //Distancia entre punto y punto 
-                let from = turf.point(previousPoint.geo.coordinates);
-                let to = turf.point(element.geo.coordinates);
-                distance = turf.distance(from, to);
-
-                element['deltaDistance'] = distance;
-                element['deltaTime'] = diffMin;
-                element['Head'] = parseInt(element['Head']) + 180
-                previousPoint = element
-
-            })
-
-            let featureCollection = GeoJSON.parse(doc, { GeoJSON: 'geo' });
-            res.send(200, featureCollection)
+    db.collection('Devices').aggregate([
+        {
+            $match: {}
+        },
+        {
+            $group: {
+                _id: "$ID",
+                points: {
+                    $push: "$features"
+                }
+            }
         }
-    });
+    ],
+        function (err, doc) {
+
+            if (err) {
+                console.log('ddErr', err);
+                res.status(400).send(err);
+            }
+            else {
+                let arrFeatures = [];
+                doc.forEach(device => {
+
+                    var previousPoint, distance;
+                    device.points[0].forEach((point, index) => {
+
+                        if (index == 0) previousPoint = point
+
+                        //Tiempo trancurrido entre punto y punto
+                        let dateInit = new Date(previousPoint.dateRemora).getTime();
+                        let dateEnd = new Date(point.dateRemora).getTime();
+                        let diffMin = (dateEnd - dateInit) / (1000 * 60);
+
+                        //Distancia entre punto y punto 
+                        let from = turf.point(previousPoint.geo.coordinates);
+                        let to = turf.point(point.geo.coordinates);
+                        distance = turf.distance(from, to);
+
+                        point['deltaDistance'] = distance;
+                        point['deltaTime'] = diffMin;
+                        point['Head'] = parseInt(point['Head']) + 180
+                        previousPoint = point
+
+                        arrFeatures.push(point)
+                    });
+                });
+                let featureCollection = GeoJSON.parse(arrFeatures, { GeoJSON: 'geo' });
+                res.status(200).send(featureCollection)
+            }
+        });
 }
 
 //Retorna todas las lineas
 exports.getLines = (req, res) => {
 
-    db.collection('Zeus').aggregate([{
-        $group: {
-            _id: "$ID",
-            line: {
-                $push: "$geo.coordinates"
+    db.collection('Devices').aggregate([
+        {
+            $match: {}
+        },
+        {
+            $group: {
+                _id: "$ID",
+                points: {
+                    $push: "$features"
+                }
             }
         }
-    }], function (err, doc) {
+    ],
+        (err, doc) => {
 
-        if (err) { throw err; res.send(400, err); }
-        else {
-            let featureCollection = GeoJSON.parse(doc, { 'LineString': 'line' });
-            res.send(200, featureCollection)
-        }
-    });
+            if (err) {
+                console.log('ddErr', err);
+                res.status(400).send(err);
+            }
+            else {
+
+                let arrFeatures = [];
+                doc.forEach((device, index) => {
+                    var i = index
+                    arrFeatures.push({ ID: device._id, line: [] })
+                    device.points[0].forEach(point => {
+                        arrFeatures[index].line.push(point.geo.coordinates);
+                    });
+                });
+                let featureCollection = GeoJSON.parse(arrFeatures, { 'LineString': 'line' });
+                res.status(200).send(featureCollection)
+            }
+        });
 }
 
 //Retorna los datos filtrados por fechas
@@ -101,101 +135,90 @@ exports.getFilter = function (req, res) {
     var initDate = new Date(req.params.initDate),
         endDate = req.params.endDate ? new Date(req.params.endDate) : new Date();
 
-    console.log('demo', initDate)
-
-    Promise.all([filterPoints(initDate, endDate), filterLines(initDate, endDate)]).then(function (data) {
-
-
-        let gjPoints = GeoJSON.parse(data[0], { GeoJSON: 'geo' });
-        let gjLines = GeoJSON.parse(data[1], { 'LineString': 'line' });
-
-        res.send(200, { gjPoints, gjLines });
-    });
-}
-
-//Filtracion de los puntos
-var filterPoints = (initDate, endDate) => {
-
-    return new Promise(function (resolve, reject) {
-
-        db.collection('Zeus').find({
-            "$and": [
-                { "dateRemora": { "$gte": initDate } },
-                { "dateRemora": { "$lte": endDate } }]
-        }).sort({ dateRemora: 1 }).toArray(function (err, doc) {
-
-            if (err) { throw err; res.send(400, err); }
-            else {
-
-                var previousPoint, distance;
-                doc.forEach(function (element, index) {
-
-                    if (index == 0) previousPoint = element
-
-                    //Tiempo trancurrido entre punto y punto
-                    let dateInit = new Date(previousPoint.dateRemora).getTime();
-                    let dateEnd = new Date(element.dateRemora).getTime();
-                    let diffMin = (dateEnd - dateInit) / (1000 * 60);
-
-                    //Distancia entre punto y punto 
-                    let from = turf.point(previousPoint.geo.coordinates);
-                    let to = turf.point(element.geo.coordinates);
-                    distance = turf.distance(from, to);
-
-                    element['deltaDistance'] = distance;
-                    element['deltaTime'] = diffMin;
-                    element['Head'] = parseInt(element['Head']) + 180
-                    previousPoint = element
-
-                })
-                resolve(doc)
-            }
-        });
-
-
-    });
-}
-
-//Filtracion de las lineas
-var filterLines = (initDate, endDate) => {
-
-    return new Promise(function (resolve, reject) {
-
-        db.collection('Zeus').aggregate([
-            {
-                $match: {
-                    "$and": [
-                        { "dateRemora": { "$gte": initDate } },
-                        { "dateRemora": { "$lte": endDate } }]
-                }
-            },
-            {
-                $group: {
-                    _id: "$ID",
-                    line: {
-                        $push: "$geo.coordinates"
+    db.collection('Devices').aggregate([
+        {
+            $project: {
+                features: {
+                    $filter: {
+                        input: "$features",
+                        as: "feature",
+                        cond: {
+                            "$and": [
+                                { $gte: ["$$feature.dateRemora", initDate] },
+                                { $lte: ["$$feature.dateRemora", endDate] }
+                            ]
+                        }
                     }
                 }
             }
-        ],
-            function (err, doc) {
+        }
+    ],
+        function (err, doc) {
 
-                if (err) { throw err; res.send(400, err); }
-                else {
-                    resolve(doc)
-                }
-            });
-    });
+            if (err) {
+                console.log('errr', err)
+                reject(err);
+            }
+            else {
+                let arrFeaturesPoints = [],
+                    arrFeaturesLines = [];
+                doc.forEach((device, indexDevice) => {
+
+                    if (device.features.length != 0) arrFeaturesLines.push({ ID: '', line: [] })
+                    var previousPoint, distance;
+
+                    device.features.forEach((feature, indexFeature) => {
+
+                        /* Point */
+                        if (indexFeature == 0) previousPoint = feature
+
+                        //Tiempo trancurrido entre punto y punto
+                        let dateInit = new Date(previousPoint.dateRemora).getTime();
+                        let dateEnd = new Date(feature.dateRemora).getTime();
+                        let diffMin = (dateEnd - dateInit) / (1000 * 60);
+
+                        //Distancia entre punto y punto 
+                        let from = turf.point(previousPoint.geo.coordinates);
+                        let to = turf.point(feature.geo.coordinates);
+                        distance = turf.distance(from, to);
+
+                        feature['deltaDistance'] = distance;
+                        feature['deltaTime'] = diffMin;
+                        feature['Head'] = parseInt(feature['Head']) + 180
+                        previousPoint = feature
+
+                        arrFeaturesPoints.push(feature);
+
+                        /* Lines */
+                        arrFeaturesLines[indexDevice].ID = feature.ID;
+                        arrFeaturesLines[indexDevice].line.push(feature.geo.coordinates)
+
+                    });
+                });
+                let gjPoints = GeoJSON.parse(arrFeaturesPoints, { GeoJSON: 'geo' });
+                let gjLines = GeoJSON.parse(arrFeaturesLines, { 'LineString': 'line' });
+                res.status(200).send({ gjPoints, gjLines })
+            }
+        });
 }
 
 //Inserta un nuevo punto 
 exports.insertPoint = function (req, res) {
 
-    var pos = req.body;
-    db.collection('Zeus').insert(pos, function (err, doc) {
-        if (err) { throw err; res.send(400, { message: err }); }
-        else {
-            res.send(200, doc);
-        }
-    });
+    var point = req.body;
+    db.collection('Devices').findAndModify(
+        { ID: point.ID },
+        [],
+        { $addToSet: { features: point } },
+        { new: true, upsert: true },
+        function (err, doc) {
+            if (err) {
+                console.log('SQ err')
+                res.send(400, err);
+            }
+            else {
+                console.log('saved squares')
+                res.send(200, doc);
+            }
+        });
 } 

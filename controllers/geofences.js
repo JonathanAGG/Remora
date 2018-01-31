@@ -37,7 +37,7 @@ exports.getPolygons = function (req, res) {
         else {
 
             let featureCollection = GeoJSON.parse(doc, { GeoJSON: 'geo' });
-            res.send(200, featureCollection);
+            res.status(200).send(featureCollection)
         }
     });
 }
