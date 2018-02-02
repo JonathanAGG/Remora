@@ -7,8 +7,6 @@ const socketMd = require("../middlewares/sockets");
 /* GET */
 router.get('/points', zeusController.getAllPoints);
 router.get('/lines', zeusController.getAllLines);
-router.get('/devices', zeusController.getAllDevices);
-router.get('/devices/:deviceId', zeusController.getDevice);
 
 /* POST */
 router.post('/filter', zeusController.getFilter);

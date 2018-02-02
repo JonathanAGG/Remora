@@ -136,10 +136,6 @@ exports.getFilter = function (req, res) {
         endDate = req.body.endDate ? new Date(req.body.endDate) : new Date(),
         arrDevices = req.body.devices
 
-        console.log('initD',req.body)
-      /*   console.log('endD',req.params.endDate)
-        console.log('devices', JSON.parse(req.params.devices)) */
-
     db.collection('Devices').aggregate([
         {
             $match: { ID : { $in : arrDevices } }
@@ -209,40 +205,6 @@ exports.getFilter = function (req, res) {
                 res.status(200).send({ gjPoints, gjLines })
             }
         });
-}
-
-//Retorna todas los dispositivos
-exports.getAllDevices = function (req, res) {
-
-    db.collection('Devices').find({ features: { $exists: true } }, { features: 0}).toArray(function (err, doc) {
-
-        if (err) {
-            res.status(400).send({ message: err })
-        }
-        else {
-            res.status(200).send(doc)
-        }
-    });
-}
-
-//Retorna un dispositivo
-exports.getDevice = function (req, res) {
-
-    let deviceId = req.params.deviceId;
-
-    console.log('deviceId',deviceId)
-
-    db.collection('Devices').find({ features: { $exists: true }, ID: deviceId }).toArray(function (err, doc) {
-
-        if (err) {
-            console.log('err',err)
-            res.status(400).send({ message: err })
-        }
-        else {
-            let featureCollection = GeoJSON.parse(doc[0].features, { GeoJSON: 'geo' });
-            res.status(200).send(featureCollection)
-        }
-    });
 }
 
 //Inserta un nuevo punto 

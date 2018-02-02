@@ -10,6 +10,7 @@ var cors = require('cors')
 
 var zeus = require('./routes/zeus');
 var geofences = require('./routes/geofences');
+var devices = require('./routes/devices');
 
 var port = Number(process.env.PORT || 3000)
 var app = express();
@@ -42,6 +43,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/zeus', zeus);
 app.use('/geofences', geofences);
+app.use('/devices', devices);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
