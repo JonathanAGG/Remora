@@ -1,59 +1,21 @@
 'use strict'
-var mongo = require('mongodb'); //Biblioteca para comunicarse con la base de datos MongoDB
-var GeoJSON = require('geojson'); //Modulo para parsear de un json a un geoJson
-var turf = require('@turf/turf'); //Modulo para medir distancias a partir de coordenadas
-const io = require('socket.io')(3002);
-
-//Puerto de conexión con la base de datos (no es el mismo de escucha del servidor)
-var uristring =
-    process.env.MONGOLAB_URI ||
-    process.env.MONGOHQ_URL ||
-    'mongodb://localhost/Remora',
-    //'mongodb://heroku_v37rd9bf:lsd8ccnsrsn5skoiv1rpncad77@ds011890.mlab.com:11890/heroku_v37rd9bf',
-    db;
-
-
-//Conexión con la base de datos
-mongo.MongoClient.connect(uristring, function (err, database) {
-    if (!err) {
-        db = database; //Instancia de la base de datos
-        console.log('Connected to the "Zeus" database');
-    }
-    else {
-        console.log(404, 'Error Connecting to the "Zeus" database');
-    }
-});
-
-io.on('connection', function (socket) {
-    console.log('connection');
-    socket.emit('news', { hello: 'world' });
-  });
-  
-  
+var turf = require('@turf/turf');
 /**
 @AUTHOR:    JONATHAN GRANADOS GUERRERO 
             JGRANADOS0794@GMAIL.COM
 **/
 
+exports.generator = function (geofence) {
 
-exports.quadtree = function (req,res,next) {
-
-        
-
-        var geofence = req.body
-/* 
-        var geofence = {
-            "type": "Feature",
-            "properties": {},
-            "geometry": feature
-        }; */
-
-        console.log(geofence)
+    return new Promise((resolve, reject) => {
 
         var matrizBinary = [] //Almacena banderas para indicar cuales cuadros estan contenidos en la geofence
         var matrizFeature = []; //Almacena los cuadros ordenados en formato de matris 
+        let area = turf.area(geofence)
+        let minimumSquare = area*0.000000003;
+        console.log('minimumSquare', minimumSquare) ;
 
-        createGrid(geofence, .5, { units: 'miles' }) //Genera un GRID de cuadros sobre la geofence
+        createGrid(geofence, .5, { units: 'kilometers' }) //Genera un GRID de cuadros sobre la geofence
             .then((segmentGrid) =>
 
                 createMatriz(geofence, segmentGrid, matrizBinary, matrizFeature)//Devuelve la matriz de binarios y la de caracteristicas para manipularlas luego
@@ -68,19 +30,16 @@ exports.quadtree = function (req,res,next) {
 
                 findFeature(arrCoorSegment, matrizFeature) //Toma las coordenadas (x,y) de la matriz binaria y devulve las caracteristicas en formato geojson
             )
-            .then((arrSquare) =>{
-
+            .then((arrSquare) => {
                 let featureCollection = turf.featureCollection(arrSquare);
-                
-                io.emit('newSquares', featureCollection);
+                resolve(featureCollection)
             }
-                
             )
             .catch(() =>
-            
-            console.log('Error Quadtree')
-            );
 
+                reject('Error Quadtree')
+            );
+    })
 }
 
 //Divide la geofence en una cuadricula para despues manipularla como una matriz

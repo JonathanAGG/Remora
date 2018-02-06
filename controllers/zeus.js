@@ -62,28 +62,32 @@ exports.getAllPoints = (req, res) => {
                 let arrFeatures = [];
                 doc.forEach(device => {
 
-                    var previousPoint, distance;
-                    device.points[0].forEach((point, index) => {
+                    if (device.points.length > 0) {
 
-                        if (index == 0) previousPoint = point
+                        var previousPoint, distance;
+                        device.points[0].forEach((point, index) => {
 
-                        //Tiempo trancurrido entre punto y punto
-                        let dateInit = new Date(previousPoint.dateRemora).getTime();
-                        let dateEnd = new Date(point.dateRemora).getTime();
-                        let diffMin = (dateEnd - dateInit) / (1000 * 60);
+                            if (index == 0) previousPoint = point
 
-                        //Distancia entre punto y punto 
-                        let from = turf.point(previousPoint.geo.coordinates);
-                        let to = turf.point(point.geo.coordinates);
-                        distance = turf.distance(from, to);
+                            //Tiempo trancurrido entre punto y punto
+                            let dateInit = new Date(previousPoint.dateRemora).getTime();
+                            let dateEnd = new Date(point.dateRemora).getTime();
+                            let diffMin = (dateEnd - dateInit) / (1000 * 60);
 
-                        point['deltaDistance'] = distance;
-                        point['deltaTime'] = diffMin;
-                        point['Head'] = parseInt(point['Head']) + 180
-                        previousPoint = point
+                            //Distancia entre punto y punto 
+                            let from = turf.point(previousPoint.geo.coordinates);
+                            let to = turf.point(point.geo.coordinates);
+                            distance = turf.distance(from, to);
 
-                        arrFeatures.push(point)
-                    });
+                            point['deltaDistance'] = distance;
+                            point['deltaTime'] = diffMin;
+                            point['Head'] = parseInt(point['Head']) + 180
+                            previousPoint = point
+
+                            arrFeatures.push(point)
+                        });
+
+                    }
                 });
                 let featureCollection = GeoJSON.parse(arrFeatures, { GeoJSON: 'geo' });
                 res.status(200).send(featureCollection)
@@ -115,13 +119,17 @@ exports.getAllLines = (req, res) => {
             }
             else {
 
-                let arrFeatures = [];
+                let arrFeatures = [], i = 0;
                 doc.forEach((device, index) => {
-                    var i = index
-                    arrFeatures.push({ ID: device._id, line: [] })
-                    device.points[0].forEach(point => {
-                        arrFeatures[index].line.push(point.geo.coordinates);
-                    });
+
+                    if (device.points.length > 0) {
+
+                        arrFeatures.push({ ID: device._id, line: [] })
+                        device.points[0].forEach(point => {
+                            arrFeatures[i].line.push(point.geo.coordinates);
+                        });
+                        i++;
+                    }
                 });
                 let featureCollection = GeoJSON.parse(arrFeatures, { 'LineString': 'line' });
                 res.status(200).send(featureCollection)
@@ -132,13 +140,13 @@ exports.getAllLines = (req, res) => {
 //Retorna los datos filtrados por fechas
 exports.getFilter = function (req, res) {
 
-     var initDate = new Date(req.body.initDate),
+    var initDate = new Date(req.body.initDate),
         endDate = req.body.endDate ? new Date(req.body.endDate) : new Date(),
         arrDevices = req.body.devices
 
     db.collection('Devices').aggregate([
         {
-            $match: { ID : { $in : arrDevices } }
+            $match: { ID: { $in: arrDevices } }
         },
         {
             $project: {
@@ -150,7 +158,7 @@ exports.getFilter = function (req, res) {
                             "$and": [
                                 { $gte: ["$$feature.dateRemora", initDate] },
                                 { $lte: ["$$feature.dateRemora", endDate] }
-                                
+
                             ]
                         }
                     }

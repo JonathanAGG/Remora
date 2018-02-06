@@ -23,10 +23,34 @@ mongo.MongoClient.connect(uristring, function (err, database) {
     }
 });
 
-//Retorna todas los dispositivos
+//Retorna todos los dispositivos
 exports.getAllDevices = function (req, res) {
 
-    db.collection('Devices').find({ features: { $exists: true } }, { features: 0}).toArray(function (err, doc) {
+    db.collection('Devices').find().toArray(function (err, doc) {
+
+        if (err) {
+            res.status(400).send({ message: err })
+        }
+        else {
+
+            doc.forEach(device => {
+
+                if (device.features) {
+                    delete device['features']
+                    device['isOperating'] = true
+                } else {
+                    device['isOperating'] = false
+                }
+            });
+            res.status(200).send(doc)
+        }
+    });
+}
+
+//Retorna los dispositivos que estan en funcionamiento
+exports.getOperatingDevices = function (req, res) {
+
+    db.collection('Devices').find({ features: { $exists: true } }, { features: 0 }).toArray(function (err, doc) {
 
         if (err) {
             res.status(400).send({ message: err })
@@ -37,6 +61,7 @@ exports.getAllDevices = function (req, res) {
     });
 }
 
+
 //Retorna los features de un dispositivo
 exports.getFeaturesDevice = function (req, res) {
 
@@ -45,11 +70,12 @@ exports.getFeaturesDevice = function (req, res) {
     db.collection('Devices').find({ features: { $exists: true }, ID: deviceId }).toArray(function (err, doc) {
 
         if (err) {
-            console.log('err',err)
+            console.log('err', err)
             res.status(400).send({ message: err })
         }
         else {
-            let featureCollection = GeoJSON.parse(doc[0].features, { GeoJSON: 'geo' });
+            let features = doc[0] ? doc[0].features : [];
+            let featureCollection = GeoJSON.parse(features, { GeoJSON: 'geo' });
             res.status(200).send(featureCollection)
         }
     });
@@ -60,12 +86,12 @@ exports.getDetailsDevice = function (req, res) {
 
     let deviceId = req.params.deviceId;
 
-    console.log('deviceId',deviceId)
+    console.log('deviceId', deviceId)
 
-    db.collection('Devices').find({ ID: deviceId },{features: 0}).toArray(function (err, doc) {
+    db.collection('Devices').find({ ID: deviceId }, { features: 0 }).toArray(function (err, doc) {
 
         if (err) {
-            console.log('err',err)
+            console.log('err', err)
             res.status(400).send({ message: err })
         }
         else {
@@ -79,22 +105,60 @@ exports.editDevice = function (req, res) {
 
     let detail = req.body,
         id = req.params.deviceId;
-    
+
     delete detail['_id'];
 
     db.collection('Devices').findAndModify(
         { ID: id },
         [],
         { $set: detail },
-        { new: true},
+        { new: true },
         function (err, doc) {
             if (err) {
                 console.log('Err', err)
                 res.send(400, err);
             }
             else {
-                console.log('saved squares')
                 res.send(200, doc);
             }
         });
-} 
+}
+
+//Actualiza un dispositivo 
+exports.insertDevice = function (req, res) {
+
+    let detail = req.body;
+
+    if (detail.ID == '') {
+        res.send(422, "Id is Required");
+    }
+    else {
+
+        db.collection('Devices').findAndModify(
+            { ID: detail.ID },
+            [],
+            { $set: detail },
+            { new: true, upsert: true },
+            function (err, doc) {
+                if (err) {
+                    console.log('Err', err)
+                    res.send(400, err);
+                }
+                else {
+                    console.log('saved squares')
+                    res.send(200, doc);
+                }
+            });
+    }
+}
+
+//Elimina un dispositivo
+exports.deleteDevice = function (req, res) {
+
+    let id = req.params.id;
+
+    db.collection('Devices').findAndRemove({ ID: id }, function (err, doc) {
+
+        err ? res.status(400).send(err) : res.status(202).send(doc);
+    });
+}
