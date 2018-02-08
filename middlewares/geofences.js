@@ -5,6 +5,7 @@ const GeoJSON = require('geojson');
 
 const geofencesController = require("../controllers/geofences");
 const squaresGenerator = require("../libraries/squaresGenerator")
+const notificationModule = require("../libraries/notificationModule")
 
 io.on('connection', function (socket) {
   console.log('connection');
@@ -28,7 +29,23 @@ exports.checkGeofence = (req, res, next) => {
           point: gjPoint
         }
 
+        //Real time notification
         io.emit('alert', response);
+
+        //Send mail notification 
+        notificationModule.sendEmail(
+          ['jgranados0794@gmail.com'],
+          'Geofence Alert ' + new Date(),
+          'La embarcación: ' + response.point.properties.ID + ' ha ingresado a la geofence: ' + response.geofence.properties.description
+        );
+
+        //Send sms notification
+        notificationModule.sendSms(
+          ['+50684711356','+50683459091'],
+          'Remora',
+          'La embarcacion: ' + response.point.properties.ID + ' ha ingresado a la geofence: ' + response.geofence.properties.description + '. ' + new Date().toDateString()
+        )
+
       }
     }, function (err) {
       console.log(err);
@@ -46,13 +63,13 @@ exports.deleteGeofence = (req, res, next) => {
 exports.createSquares = (req, res, next) => {
   let geofence = req.body
   let id = req.params.id
-  squaresGenerator.generator(geofence).then(function(squaresCollection){
+  squaresGenerator.generator(geofence).then(function (squaresCollection) {
 
-    geofencesController.insertSquares(squaresCollection,id).then(response => {
+    geofencesController.insertSquares(squaresCollection, id).then(response => {
 
       io.emit('newSquares', squaresCollection);
     })
-    
+
   })
   next();
 }

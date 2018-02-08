@@ -6,8 +6,7 @@ const GeoJSON = require('geojson');
 
 //Puerto de conexión con la base de datos (no es el mismo de escucha del servidor)
 var uristring =
-    process.env.MONGOLAB_URI ||
-    process.env.MONGOHQ_URL ||
+    process.env.MONGODB_URI ||
     'mongodb://localhost/Remora',
     //'mongodb://heroku_v37rd9bf:lsd8ccnsrsn5skoiv1rpncad77@ds011890.mlab.com:11890/heroku_v37rd9bf',
     db;

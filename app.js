@@ -8,13 +8,10 @@ var debug = require('debug')('remora:server');
 var http = require('http');
 var cors = require('cors')
 
-var zeus = require('./routes/zeus');
-var geofences = require('./routes/geofences');
-var devices = require('./routes/devices');
-
+/* Run Server */
 var port = Number(process.env.PORT || 3000)
 var app = express();
-var server = http.createServer(app);
+module.exports =  server = http.createServer(app);
 
 server.listen(port);
 server.on('error', onError);
@@ -29,6 +26,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+/* ROUTING */
+var zeus = require('./routes/zeus');
+var geofences = require('./routes/geofences');
+var devices = require('./routes/devices');
 app.use('/zeus', zeus);
 app.use('/geofences', geofences);
 app.use('/devices', devices);
@@ -87,3 +88,4 @@ function onListening() {
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
+
