@@ -6,7 +6,7 @@ const turf = require('turf');
 
 const geofencesController = require("../controllers/geofences");
 const infractionsController = require("../controllers/infractions");
-const notificationModule = require("../libraries/notificationModule")
+const notificationModule = require("../modules/notificationModule")
 
 //Middleware para validar si el punto se encuantra dentro de un geofence 
 exports.validateInfraction = (req, res, next) => {

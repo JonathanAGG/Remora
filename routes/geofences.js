@@ -19,6 +19,6 @@ router.put('/:id/simplifys', geofencesMiddleware.createSquares ,geofencesControl
 //router.put('/:id/squares', geofencesController.insertSquares ); //Insert squares 
 
 /* DELETE */
-router.delete('/:id', geofencesMiddleware.deleteGeofence, geofencesController.deletePolygons);
+router.delete('/:id', geofencesController.deletePolygons);
 
 module.exports = router;

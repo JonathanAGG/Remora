@@ -1,3 +1,5 @@
+
+
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -7,6 +9,10 @@ var bodyParser = require('body-parser');
 var debug = require('debug')('remora:server');
 var http = require('http');
 var cors = require('cors')
+
+//Modulo para la verificacion y notificacion de vencimineto de licencias
+let renewLicense = require('./modules/renewLicense')
+
 
 /* Run Server */
 var port = Number(process.env.PORT || 3000)
@@ -90,4 +96,3 @@ function onListening() {
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
-
