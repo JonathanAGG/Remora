@@ -9,6 +9,7 @@ const geofencesMiddleware = require("../middlewares/geofences");
 router.get('/', geofencesController.getPolygons);
 router.get('/simplifys', geofencesController.getSimplifys);
 router.get('/squares', geofencesController.getSquares);
+router.get('/details', geofencesController.getDetails);
 
 /* POST */
 router.post('/', geofencesController.insertPolygons);

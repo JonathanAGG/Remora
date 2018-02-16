@@ -218,6 +218,7 @@ exports.getFilter = function (req, res) {
 exports.insertPoint = function (req, res) {
 
     var point = req.body;
+    //console.log('insert', point)
     db.collection('Devices').findAndModify(
         { ID: point.ID },
         [],
@@ -229,7 +230,7 @@ exports.insertPoint = function (req, res) {
                 res.send(400, err);
             }
             else {
-                console.log('saved squares')
+                console.log('saved new point')
                 res.send(200, doc);
             }
         });

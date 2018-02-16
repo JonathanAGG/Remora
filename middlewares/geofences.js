@@ -21,6 +21,10 @@ exports.checkGeofence = (req, res, next) => {
     .then(function (alert) {
 
       if (alert.length > 0) {
+
+        req.body['infraction'] = {geofenceName : alert[0].description};
+        //console.log('point', point)
+
         let gjPoint = GeoJSON.parse(point, { GeoJSON: 'geo' });
         let gjPolygon = GeoJSON.parse(alert[0], { GeoJSON: 'geo' });
 
@@ -32,7 +36,7 @@ exports.checkGeofence = (req, res, next) => {
         //Real time notification
         io.emit('alert', response);
 
-        //Send mail notification 
+       /*  //Send mail notification 
         notificationModule.sendEmail(
           ['jgranados0794@gmail.com'],
           'Geofence Alert ' + new Date(),
@@ -44,13 +48,15 @@ exports.checkGeofence = (req, res, next) => {
           ['+50684711356','+50683459091'],
           'Remora',
           'La embarcacion: ' + response.point.properties.ID + ' ha ingresado a la geofence: ' + response.geofence.properties.description + '. ' + new Date().toDateString()
-        )
+        ) */
 
       }
+      next();
     }, function (err) {
       console.log(err);
+      next();
     });
-  next();
+  
 }
 
 exports.deleteGeofence = (req, res, next) => {

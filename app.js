@@ -30,9 +30,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 var zeus = require('./routes/zeus');
 var geofences = require('./routes/geofences');
 var devices = require('./routes/devices');
+var infractions = require('./routes/infractions');
 app.use('/zeus', zeus);
 app.use('/geofences', geofences);
 app.use('/devices', devices);
+app.use('/infractions', infractions);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

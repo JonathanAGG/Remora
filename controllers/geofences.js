@@ -64,6 +64,21 @@ exports.getSquares = function (req, res) {
     });
 }
 
+//Retorna todos los detalles de las geofences
+exports.getDetails = function (req, res) {
+
+    db.collection('geofence').find({ geo: { $exists: true } }, { simplify: 0, squares: 0, geo:0 }).toArray(function (err, doc) {
+
+        if (err) {
+            res.send(404, { message: err })
+        }
+        else {
+
+            res.status(200).send(doc)
+        }
+    });
+}
+
 //Inserta una nueva geofence
 exports.insertPolygons = (req, res) => {
 
